@@ -1,13 +1,14 @@
 <form>
-    <button>Connect with BLE device</button>
+    <button>Connect with BLE device for multi-factor authentication</button>
   </form>
   
   <script>
-    var deviceName = 'Palm'
-  
+    // var deviceName = 'ble_device'
+   
     function isWebBluetoothEnabled() {
       if (!navigator.bluetooth) {
-        console.log('Web Bluetooth API is not available in this browser!')
+        console.log("Web Bluetooth API is not available in this browser!")
+        console.log("Kindly use either Google Chrome,Firefox or Safari.")
         return false
       }
   
@@ -16,10 +17,13 @@
   
     function getDeviceInfo() {
       let options = {
-        // acceptAllDevices: true // Option to accept all devices
-        "filters": [
-          { "name": deviceName }
+        filters: [
+          { namePrefix: "ble_device"}
         ]
+        // acceptAllDevices: true // Option to accept all devices
+        /* "filters": [
+          { "name": deviceName }
+        ] */      // Option to accept device with particular name 
       }
   
       console.log('Requesting Bluetooth Device...')
