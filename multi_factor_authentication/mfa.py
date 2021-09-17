@@ -11,7 +11,7 @@ detecting = True
 found = set()
 
 # Scan and detect dongles
-for advertisement in ble.start_scan(Advertisement, timeout=20):
+for advertisement in ble.start_scan(Advertisement, timeout=10):
     device_name = advertisement.complete_name
  
     if device_name and device_name not in found:
@@ -25,7 +25,7 @@ for advertisement in ble.start_scan(Advertisement, timeout=20):
             if GMS_connection and GMS_connection.connected:
                 GMS_transmission = GMS_connection[GMS]
                 GMS_transmission.write(b"Authentication")
-                ble_serial_number = GMS_transmission.read(64).decode("utf-8")
+                ble_serial_number = GMS_transmission.read(128).decode("utf-8")
                 if ble_serial_number:
                     print(ble_serial_number)
                 public_key = GMS_transmission.read(64).decode("utf-8")
