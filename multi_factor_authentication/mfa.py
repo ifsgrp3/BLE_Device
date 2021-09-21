@@ -1,17 +1,24 @@
 from time import sleep
+import os
+import binascii
+from Crypto.Cipher import AES
 from adafruit_ble import BLERadio
 from adafruit_ble.services.gmsservice import GMS
 from adafruit_ble.advertising import Advertisement
 from adafruit_ble.advertising.standard import ProvideServicesAdvertisement
 
+def decryption(ciphertext):
+    key = (b"1111222233334444")
+    data = binascii.unhexlify(ciphertext)
+    decryptor = AES.new(key, AES.MODE_ECB)
+    plaintext = decryptor.decrypt(data)
+    print(plaintext.decode("utf-8"))
+
 ble = BLERadio()
-#connection = None
-authentication_message = "Authentication"
-detecting = True
 found = set()
 
 # Scan and detect dongles
-for advertisement in ble.start_scan(Advertisement, timeout=10):
+for advertisement in ble.start_scan(Advertisement, timeout=20):
     device_name = advertisement.complete_name
  
     if device_name and device_name not in found:
@@ -25,12 +32,13 @@ for advertisement in ble.start_scan(Advertisement, timeout=10):
             if GMS_connection and GMS_connection.connected:
                 GMS_transmission = GMS_connection[GMS]
                 GMS_transmission.write(b"Authentication")
-                ble_serial_number = GMS_transmission.read(128).decode("utf-8")
-                if ble_serial_number:
-                    print(ble_serial_number)
-                public_key = GMS_transmission.read(64).decode("utf-8")
-                if public_key:
-                    print(public_key)
+                ble_serial_number = GMS_transmission.read(32).decode("utf-8")
+                decryption(ble_serial_number)
+#                if ble_serial_number:
+ #                   print(ble_serial_number)
+  #              public_key = GMS_transmission.read(64).decode("utf-8")
+   #             if public_key:
+    #                print(public_key)
                 GMS_connection.disconnect()
                 
 ble.stop_scan()            

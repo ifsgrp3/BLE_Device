@@ -6,7 +6,7 @@ The sketch demonstrates a simple echo BLE device
 #include <RFduinoBLE.h>
 
 bool rssidisplay;
-
+int dotcount=0;
 const char * myid = "ble_device_9";   
 
 void setup() {
@@ -18,26 +18,20 @@ void setup() {
    Serial.println(" device restarting..."); 
 }
 
-void RFduinoBLE_onConnect() {
-   Serial.println("Start connection...");
-   
-   rssidisplay = true;
-}
-
-void RFduinoBLE_onDisconnect() {
-   Serial.println("Disconnection..."); 
-}
-
 void RFduinoBLE_onReceive(char *data, int len) { 
    data[len] = 0;  
    const char * key = "Authentication";
    if (strcmp(data, key) == 0) {
+    RFduinoBLE.send("4F462FDFB18767837596", 20);
+    RFduinoBLE.send("51D546333F8D", 12);
+
+    /*
     RFduinoBLE.send("12345678912345678912",20);
     RFduinoBLE.send("12345678912345678912",20);
     RFduinoBLE.send("12345678912345678912",20);
     RFduinoBLE.send("1234",4);
     delay(1000);
-    RFduinoBLE.send("123456789",9);
+    RFduinoBLE.send("123456789",9); */
    }
    /*
    Serial.print("Received: ");
@@ -49,16 +43,6 @@ void RFduinoBLE_onReceive(char *data, int len) {
    RFduinoBLE.send(data,len); 
    */  
 }
-
-void RFduinoBLE_onRSSI(int rssi) { 
-   if (rssidisplay) {
-      Serial.print("RSSI is "); 
-      Serial.println(rssi);                        // print rssi value
-      rssidisplay = false;
-   }
-}
-
-int dotcount=0;
 
 void loop() {
    RFduino_ULPDelay( SECONDS(0.5) );                // Ultra Low Power delay for 0.5 second
