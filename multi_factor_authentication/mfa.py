@@ -9,9 +9,9 @@ from adafruit_ble.advertising.standard import ProvideServicesAdvertisement
 
 def decryption(ciphertext):
     key = (b"1111222233334444")
-    data = binascii.unhexlify(ciphertext)
+    serial_number = binascii.unhexlify(ciphertext)
     decryptor = AES.new(key, AES.MODE_ECB)
-    plaintext = decryptor.decrypt(data)
+    plaintext = decryptor.decrypt(serial_number)
     print(plaintext.decode("utf-8"))
 
 ble = BLERadio()
@@ -27,7 +27,7 @@ for advertisement in ble.start_scan(Advertisement, timeout=20):
             found.add(device_name)
             # Establish connection with dongle
             GMS_connection = ble.connect(advertisement)
-            print("Connected to " + device_name)
+        #    print("Connected to " + device_name)
             # Tranmission with dongle
             if GMS_connection and GMS_connection.connected:
                 GMS_transmission = GMS_connection[GMS]
