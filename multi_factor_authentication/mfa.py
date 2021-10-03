@@ -18,7 +18,7 @@ ble = BLERadio()
 found = set()
 
 # Scan and detect dongles
-for advertisement in ble.start_scan(Advertisement, timeout=20):
+for advertisement in ble.start_scan(Advertisement, timeout=10):
     device_name = advertisement.complete_name
  
     if device_name and device_name not in found:
@@ -27,7 +27,7 @@ for advertisement in ble.start_scan(Advertisement, timeout=20):
             found.add(device_name)
             # Establish connection with dongle
             GMS_connection = ble.connect(advertisement)
-        #    print("Connected to " + device_name)
+            print("Connected to " + device_name)
             # Tranmission with dongle
             if GMS_connection and GMS_connection.connected:
                 GMS_transmission = GMS_connection[GMS]
