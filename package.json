@@ -1,23 +1,6 @@
 {
-  "name": "ble",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://hiongkaihan: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@github.com/hiongkaihan/BLE_Device.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/hiongkaihan/BLE_Device/issues"
-  },
-  "homepage": "https://github.com/hiongkaihan/BLE_Device#readme",
   "dependencies": {
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "python-shell": "^3.0.0"
   }
 }
