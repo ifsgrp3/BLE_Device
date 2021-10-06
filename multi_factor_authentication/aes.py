@@ -14,7 +14,7 @@ text2 = (b"5w4lj9nek0dpz1o73assgsx4pg6pj73ztjr8wz5bkzk3qtcj5miexhqajka7re4c")
 encryptor = AES.new(key, AES.MODE_ECB)
 decryptor = AES.new(key, AES.MODE_ECB)
 
-ciphertext = encryptor.encrypt(text)
+ciphertext = encryptor.encrypt(text2)
 print(ciphertext)
 print(binascii.hexlify(ciphertext).upper())
 plaintext = decryptor.decrypt(ciphertext)
