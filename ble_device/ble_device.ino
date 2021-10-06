@@ -23,6 +23,18 @@ static TestVector const testVectorAES128 = {
   .ciphertext = {0x69, 0xC4, 0xE0, 0xD8, 0x6A, 0x7B, 0x04, 0x30,0xD8, 0xCD, 0xB7, 0x80, 0x70, 0xB4, 0xC5, 0x5A}
 }; */
 
+void array_to_string(byte array[], unsigned int len, char buffer[])
+{
+    for (unsigned int i = 0; i < len; i++)
+    {
+        byte nib1 = (array[i] >> 4) & 0x0F;
+        byte nib2 = (array[i] >> 0) & 0x0F;
+        buffer[i*2+0] = nib1  < 0xA ? '0' + nib1  : 'A' + nib1  - 0xA;
+        buffer[i*2+1] = nib2  < 0xA ? '0' + nib2  : 'A' + nib2  - 0xA;
+    }
+    buffer[len*2] = '\0';
+}
+
 static TestVector const testVectorAES128 = {
   .name = "AES-128-ECB",
   .key = {0x31, 0x31, 0x31, 0x31, 0x32, 0x32, 0x32, 0x32, 0x33, 0x33, 0x33, 0x33, 0x34, 0x34, 0x34, 0x34},
@@ -33,6 +45,13 @@ static TestVector const testVectorAES128 = {
 AES128 aes128;
 byte buffer[16];
 
+void printHex(uint8_t num) {
+  char hexCar[2];
+
+  sprintf(hexCar, "%02X", num);
+  Serial.print(hexCar);
+}
+
 void testCipher(BlockCipher *cipher, const struct TestVector *test)
 {
     crypto_feed_watchdog();
@@ -40,8 +59,11 @@ void testCipher(BlockCipher *cipher, const struct TestVector *test)
     Serial.print(" Encryption ... ");
     cipher->setKey(test->key, cipher->keySize());
     cipher->encryptBlock(buffer, test->plaintext);
-    for (int i = 0; i < 16; i++) {
-      Serial.print(buffer[i]);
+    char str[17];
+    memcpy(str, buffer, 16);
+    str[16] = 0;
+    for(int i=0; i<16; i++){
+    printHex(str[i]);
     }
     if (memcmp(buffer, test->ciphertext, 16) == 0)
         Serial.println("Passed");
@@ -112,12 +134,36 @@ void setup() {
    Serial.println(" device restarting..."); 
 }
 
+void substring(char str[], char new_str[], int pos, int len) {
+   int i = 0;
+   while (i < len) {
+      new_str[i] = str[pos+i-1];
+      i++;
+   }
+   new_str[i] = '\0';
+}
+
 void RFduinoBLE_onReceive(char *data, int len) { 
    data[len] = 0;  
+   char str[] = "";
+   char packet_1[20];
+   char packet_2[12];
+   byte array[16] = {0x4F, 0x46, 0x2F, 0xDF, 0xB1, 0x87, 0x67, 0x83, 0x75, 0x96, 0x51, 0xD5, 0x46, 0x33, 0x3F, 0x8D};
+   array_to_string(array, 16, str);
+   substring(str, packet_1, 1, 20);
+   substring(str, packet_2, 21, 12);
+   Serial.print("packet1");
+   for (int i=0; i < 20; i++) {
+    Serial.print(packet_1[i]);
+   }
+   
    const char * key = "Authentication";
    if (strcmp(data, key) == 0) {
+    RFduinoBLE.send(packet_1, 20);
+    RFduinoBLE.send(packet_2, 12);
+    /*
     RFduinoBLE.send("4F462FDFB18767837596", 20);
-    RFduinoBLE.send("51D546333F8D", 12);
+    RFduinoBLE.send("51D546333F8D", 12); */
    }
 }
 
