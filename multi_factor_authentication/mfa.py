@@ -33,6 +33,7 @@ for advertisement in ble.start_scan(Advertisement, timeout=10):
                 GMS_transmission = GMS_connection[GMS]
                 GMS_transmission.write(b"Authentication")
                 ble_serial_number = GMS_transmission.read(32).decode("utf-8")
+                print(ble_serial_number)
                 decryption(ble_serial_number)
 #                if ble_serial_number:
  #                   print(ble_serial_number)
