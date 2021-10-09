@@ -28,7 +28,7 @@ def aes_encryption(plaintext):
     
 # Scan and detect dongles
 print("\nSearching for MFA devices...\n")
-for advertisement in ble.start_scan(Advertisement, timeout=10):
+for advertisement in ble.start_scan(Advertisement, timeout=8):
     device_name = advertisement.complete_name
  
     if device_name and device_name not in found:
