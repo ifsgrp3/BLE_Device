@@ -12,10 +12,11 @@ found = set()
 device_name_prefix = "ble_device"
 authentication_code = b"Authentication"
 
-def aes_decryption(ciphertext):
+def aes_decryption(ciphertext, iv):
     key = (b"1111222233334444")
     ciphertext = binascii.unhexlify(ciphertext)
-    decryptor = AES.new(key, AES.MODE_ECB)
+    iv = binascii.unhexlify(iv)
+    decryptor = AES.new(key, AES.MODE_CBC, iv)
     plaintext = decryptor.decrypt(ciphertext)
     return plaintext.decode("utf-8")
 
@@ -28,7 +29,7 @@ def aes_encryption(plaintext):
     
 # Scan and detect dongles
 print("\nSearching for MFA devices...\n")
-for advertisement in ble.start_scan(Advertisement, timeout=5):
+for advertisement in ble.start_scan(Advertisement, timeout=10):
     device_name = advertisement.complete_name
  
     if device_name and device_name not in found:
@@ -47,11 +48,12 @@ for advertisement in ble.start_scan(Advertisement, timeout=5):
                 ciphertext = GMS_transmission.read(64).decode("utf-8")
                 try:
                     ciphertext += GMS_transmission.read(64).decode("utf-8")
+                    iv = GMS_transmission.read(32).decode("utf-8")
                 except:
-                    print("failed")
-                print(ciphertext)
-                #print("Encrypted serial number: " + ciphertext)
-                ble_serial_num = aes_decryption(ciphertext)
+                   print("failed")
+                #print(ciphertext)
+                print("Encrypted serial number: " + ciphertext)
+                ble_serial_num = aes_decryption(ciphertext, iv)
                 print("Serial number: " + ble_serial_num + "\n")
                 GMS_connection.disconnect()
                 
