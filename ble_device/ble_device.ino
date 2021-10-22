@@ -8,18 +8,26 @@ AES128 aes128;
 bool rssidisplay;
 int dotcount=0;
 const char * myid = "ble_device_9";
+const byte authentication[16] = {0x31, 0x31, 0x31, 0x31, 0x32, 0x32, 0x32, 0x32, 0x33, 0x33, 0x33, 0x33, 0x34, 0x34, 0x34, 0x34};
 
 struct credential_set {
-    byte key[32];
-    byte serial_num[16];
+    byte key[16];
+    byte serial_num[64];
 };
 
 static credential_set const credentials = {
     .key = {0x31, 0x31, 0x31, 0x31, 0x32, 0x32, 0x32, 0x32, 0x33, 0x33, 0x33, 0x33, 0x34, 0x34, 0x34, 0x34},
-    .serial_num = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36}
-};
+    .serial_num = {0x35, 0x77, 0x34, 0x6c, 0x6a, 0x39, 0x6e, 0x65,
+                   0x6b, 0x30, 0x64, 0x70, 0x7a, 0x31, 0x6f, 0x37,
+                   0x33, 0x61, 0x73, 0x73, 0x67, 0x73, 0x78, 0x34,
+                   0x70, 0x67, 0x36, 0x70, 0x6a, 0x37, 0x33, 0x7a,
+                   0x74, 0x6a, 0x72, 0x38, 0x77, 0x7a, 0x35, 0x62,
+                   0x6b, 0x7a, 0x6b, 0x33, 0x71, 0x74, 0x63, 0x6a,
+                   0x35, 0x6d, 0x69, 0x65, 0x78, 0x68, 0x71, 0x61,
+                   0x6a, 0x6b, 0x61, 0x37, 0x72, 0x65, 0x34, 0x63}
+}; 
 
-void byte_array_to_string(byte array[], unsigned int len, char result[]) {
+void byte_array_to_hex_string(byte array[], unsigned int len, char result[]) {
     for (unsigned int i = 0; i < len; i++) {
     byte nib_1 = (array[i] >> 4) & 0x0F;
     byte nib_2 = (array[i] >> 0) & 0x0F;
@@ -38,24 +46,50 @@ void substring(char str[], char new_str[], int pos, int len) {
     new_str[i] = '\0';
 }
 
-void print_Hex(uint8_t num) {
+void print_hex(uint8_t num) {
     char hex_Car[2];
     sprintf(hex_Car, "%02X", num);
     Serial.print(hex_Car);
 }
-
-void aes_encrypt(BlockCipher *cipher, const struct credential_set *credentials, byte ciphertext[16]) {
+// Split single byte array to blocks of byte array
+void split_block(byte cipher_block[16], byte serial_number[64], int pos) {
+    for (int i = 0; i < 16; i++) {
+      cipher_block[i] = serial_number[i+pos];
+    }
+}
+// Combine encrypted blocks into single ciphertext
+void add_encrypted_block(byte ciphertext[64], byte ciphertext_block[16], int pos) {
+    for (int i = 0; i < 16; i++) {
+      ciphertext[i+pos] = ciphertext_block[i]; 
+    }
+}
+// AES-EBC 128 bit encryption
+void encrypt_serial_number(BlockCipher *cipher, const struct credential_set *credentials, byte ciphertext[64]) {
+    byte serial_number[64] = {0x35, 0x77, 0x34, 0x6c, 0x6a, 0x39, 0x6e, 0x65,
+                              0x6b, 0x30, 0x64, 0x70, 0x7a, 0x31, 0x6f, 0x37,
+                              0x33, 0x61, 0x73, 0x73, 0x67, 0x73, 0x78, 0x34,
+                              0x70, 0x67, 0x36, 0x70, 0x6a, 0x37, 0x33, 0x7a,
+                              0x74, 0x6a, 0x72, 0x38, 0x77, 0x7a, 0x35, 0x62,
+                              0x6b, 0x7a, 0x6b, 0x33, 0x71, 0x74, 0x63, 0x6a,
+                              0x35, 0x6d, 0x69, 0x65, 0x78, 0x68, 0x71, 0x61,
+                              0x6a, 0x6b, 0x61, 0x37, 0x72, 0x65, 0x34, 0x63};
+    byte cipher_block[16] = "";
+    byte ciphertext_block[16] = "";
     crypto_feed_watchdog();
     cipher->setKey(credentials->key, cipher->keySize());
-    cipher->encryptBlock(ciphertext, credentials->serial_num);
-    /*
-    char str[65];
-    memcpy(str, ciphertext, 64);
-    str[64] = 0;
-    for(int i=0; i<64; i++){
-    print_Hex(str[i]);
-    } */
+    // Splits byte array into blocks   
+    for (int pos = 0; pos < 64; pos += 16) {
+      split_block(cipher_block, serial_number, pos);
+      cipher->encryptBlock(ciphertext_block, cipher_block);
+      add_encrypted_block(ciphertext, ciphertext_block, pos);
+    }
 }
+/*
+void aes_decryption(BlockCipher *cipher, const struct credential_set *credentials, byte plaintext[16] {
+    crypto_feed_watchdog();
+    cipher->setKey(credentials->key, cipher->keySize());
+    cipher->decryptBlock(plaintext, test->ciphertext);
+} */
 
 void setup() {
     RFduinoBLE.advertisementData = "echo";
@@ -70,25 +104,25 @@ void RFduinoBLE_onReceive(char *data, int len) {
     const char * authentication_code = "Authentication";
     data[len] = 0;  
     char ciphertext[128] = "";
-    char packet_1[20];
-    char packet_2[12];
-    byte ciphertext_array[16];
-    Serial.println("\nConnected to host");
-    Serial.println("Authentication code received");
+    char packet[20];
+    byte ciphertext_array[64];
 
+    Serial.println();
+    
     if(strcmp(data, authentication_code) == 0) {
-      Serial.println("Authentication code success");
-      Serial.println("Encrypting serial number");
-      aes_encrypt(&aes128, &credentials, ciphertext_array);
-      byte_array_to_string(ciphertext_array, 16, ciphertext);
-      substring(ciphertext, packet_1, 1, 20);
-      substring(ciphertext, packet_2, 21, 12);
-      Serial.println("Transmitting encrypted serial number");
-      RFduinoBLE.send(packet_1, 20);
-      RFduinoBLE.send(packet_2, 12);
-    } else {
-      Serial.println("Authentication code failed!");
-    } 
+      encrypt_serial_number(&aes128, &credentials, ciphertext_array);
+      byte_array_to_hex_string(ciphertext_array, 64, ciphertext);
+      for (int i = 0; i < 7; i++) {
+        if (i == 6) {
+          substring(ciphertext, packet, 121, 8);
+          RFduinoBLE.send(packet, 8);
+        } else {
+          substring(ciphertext, packet, (i*20)+1, 20);
+          RFduinoBLE.send(packet, 20);
+        }
+        delay(100);
+      }
+    }
 }
 
 void loop() {
@@ -383,3 +417,32 @@ static credential_set const credentials = {
     .key = {0x31, 0x31, 0x31, 0x31, 0x32, 0x32, 0x32, 0x32, 0x33, 0x33, 0x33, 0x33, 0x34, 0x34, 0x34, 0x34},
     .serial_num = {0x35, 0x77, 0x34, 0x6c, 0x6a, 0x39, 0x6e, 0x65, 0x6b, 0x30, 0x64, 0x70, 0x7a, 0x31, 0x6f, 0x37, 0x33, 0x61, 0x73, 0x73, 0x67, 0x73, 0x78, 0x34, 0x70, 0x67, 0x36, 0x70, 0x6a, 0x37, 0x33, 0x7a, 0x74, 0x6a, 0x72, 0x38, 0x77, 0x7a, 0x35, 0x62, 0x6b, 0x7a, 0x6b, 0x33, 0x71, 0x74, 0x63, 0x6a, 0x35, 0x6d, 0x69, 0x65, 0x78, 0x68, 0x71, 0x61, 0x6a, 0x6b, 0x61, 0x37, 0x72, 0x65, 0x34, 0x63}
 }; */
+
+/*
+void aes_encrypt(BlockCipher *cipher, const struct credential_set *credentials, byte ciphertext[16]) {
+    crypto_feed_watchdog();
+    cipher->setKey(credentials->key, cipher->keySize());
+    cipher->encryptBlock(ciphertext, credentials->serial_num);
+    /*
+    char str[65];
+    memcpy(str, ciphertext, 64);
+    str[64] = 0;
+    for(int i=0; i<64; i++){
+    print_Hex(str[i]);
+    } */
+
+/*
+const byte key[16] = {0x31, 0x31, 0x31, 0x31, 0x32, 0x32, 0x32, 0x32, 0x33, 0x33, 0x33, 0x33, 0x34, 0x34, 0x34, 0x34};
+const byte serial_num[64] = {0x35, 0x77, 0x34, 0x6c, 0x6a, 0x39, 0x6e, 0x65, 0x6b, 0x30, 0x64, 0x70, 0x7a, 0x31, 0x6f, 0x37, 0x33, 0x61, 0x73, 0x73, 0x67, 0x73, 0x78, 0x34, 0x70, 0x67, 0x36, 0x70, 0x6a, 0x37, 0x33, 0x7a, 0x74, 0x6a, 0x72, 0x38, 0x77, 0x7a, 0x35, 0x62, 0x6b, 0x7a, 0x6b, 0x33, 0x71, 0x74, 0x63, 0x6a, 0x35, 0x6d, 0x69, 0x65, 0x78, 0x68, 0x71, 0x61, 0x6a, 0x6b, 0x61, 0x37, 0x72, 0x65, 0x34, 0x63};
+*/
+/*
+struct credential_set {
+    byte key[16];
+    byte serial_num[16];
+};
+
+static credential_set const credentials = {
+    .key = {0x31, 0x31, 0x31, 0x31, 0x32, 0x32, 0x32, 0x32, 0x33, 0x33, 0x33, 0x33, 0x34, 0x34, 0x34, 0x34},
+    .serial_num = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36}
+}; */
+    
