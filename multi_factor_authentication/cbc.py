@@ -9,7 +9,7 @@ import os
 
 key = (b"1111222233334444")
 iv = (b"1111222233334444")
-text = (b"1234567890123456")
+text = (b"5w4lj9nek0dpz1o73assgsx4pg6pj73ztjr8wz5bkzk3qtcj5miexhqajka7re4c")
 
 #print(key)
 
