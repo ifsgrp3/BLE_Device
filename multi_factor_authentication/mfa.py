@@ -10,8 +10,9 @@ from adafruit_ble.advertising.standard import ProvideServicesAdvertisement
 ble = BLERadio()
 found = set()
 device_name_prefix = "ble_device"
-authentication_code = b"Authentication"
+authentication_code = b"JmOANYLinV80i7fy"
 
+# AES-CBC decryption
 def aes_decryption(ciphertext, iv):
     key = (b"1111222233334444")
     ciphertext = binascii.unhexlify(ciphertext)
@@ -20,6 +21,7 @@ def aes_decryption(ciphertext, iv):
     plaintext = decryptor.decrypt(ciphertext)
     return plaintext.decode("utf-8")
 
+# AES-ECB encryption
 def aes_encryption(plaintext):
     key = (b"1111222233334444")
     encryptor = AES.new(key, AES.MODE_ECB)
@@ -27,7 +29,7 @@ def aes_encryption(plaintext):
     ciphertext = encryptor.encrypt(plaintext)
     return binascii.hexlify(ciphertext).upper()
     
-# Scan and detect dongles
+# Start scanning and detecting dongles
 print("\nSearching for MFA devices...\n")
 for advertisement in ble.start_scan(Advertisement, timeout=10):
     device_name = advertisement.complete_name
@@ -44,29 +46,22 @@ for advertisement in ble.start_scan(Advertisement, timeout=10):
             # Tranmission with dongle
             if GMS_connection and GMS_connection.connected:
                 GMS_transmission = GMS_connection[GMS]
+                # Send over authentication code to dongle
                 GMS_transmission.write(authentication_code)
-                ciphertext = GMS_transmission.read(64).decode("utf-8")
+                # Receive serial number and iv from dongle
                 try:
+                    ciphertext = GMS_transmission.read(64).decode("utf-8")
                     ciphertext += GMS_transmission.read(64).decode("utf-8")
                     iv = GMS_transmission.read(32).decode("utf-8")
+                    print("Encrypted serial number: " + ciphertext)
                 except:
-                   print("failed")
-                #print(ciphertext)
-                print("Encrypted serial number: " + ciphertext)
-                ble_serial_num = aes_decryption(ciphertext, iv)
-                print("Serial number: " + ble_serial_num + "\n")
+                   print("Transmission failed")
+                # Decrypt serial number with given iv and key
+                try: 
+                    ble_serial_num = aes_decryption(ciphertext, iv)
+                    print("Serial number: " + ble_serial_num + "\n")
+                except:
+                    print("Error when decrypting serial number")
                 GMS_connection.disconnect()
                 
 ble.stop_scan()            
-
-
-
-
-
-
-#s.encode("utf-8")
-#                if ble_serial_number:
- #                   print(ble_serial_number)
-  #              public_key = GMS_transmission.read(64).decode("utf-8")
-   #             if public_key:
-    #                print(public_key)
