@@ -9,16 +9,15 @@ AES128 aes128;
 bool rssidisplay;
 int dotcount=0;
 const char * myid = "ble_device_9";
-const byte authentication[16] = {0x31, 0x31, 0x31, 0x31, 0x32, 0x32, 0x32, 0x32, 0x33, 0x33, 0x33, 0x33, 0x34, 0x34, 0x34, 0x34};
 
 struct credential_set {
     byte key[16];
 };
-
+// Secret key 
 static credential_set const credentials = {
     .key = {0x31, 0x31, 0x31, 0x31, 0x32, 0x32, 0x32, 0x32, 0x33, 0x33, 0x33, 0x33, 0x34, 0x34, 0x34, 0x34},
 }; 
-
+// Converts byte array to a hex string
 void byte_array_to_hex_string(byte array[], unsigned int len, char result[]) {
     for (unsigned int i = 0; i < len; i++) {
     byte nib_1 = (array[i] >> 4) & 0x0F;
@@ -28,7 +27,7 @@ void byte_array_to_hex_string(byte array[], unsigned int len, char result[]) {
     }
     result[len*2] = '\0';
 }
-
+// Splits string into a substring
 void substring(char str[], char new_str[], int pos, int len) {
     int i = 0;
     while (i < len) {
@@ -38,7 +37,7 @@ void substring(char str[], char new_str[], int pos, int len) {
     }
     new_str[i] = '\0';
 }
-
+// Print hexstring
 void print_hex(uint8_t num) {
     char hex_Car[2];
     sprintf(hex_Car, "%02X", num);
@@ -56,14 +55,15 @@ void add_encrypted_block(byte ciphertext[64], byte ciphertext_block[16], int pos
       ciphertext[i+pos] = ciphertext_block[i]; 
     }
 }
-// XOR two given blocks
+// AES-CBC xor operation
 void cbc_encryption(byte cipher_block[16], byte iv[16]) {
   for (int i = 0; i < 16; i++) {
     cipher_block[i] ^= iv[i];
   }
 }
-// AES-EBC 128 bit encryption
+// AES-CBC 128 bit encryption
 void encrypt_serial_number(BlockCipher *cipher, const struct credential_set *credentials, byte ciphertext[64], byte iv[16]) {
+    // Dongle serial number
     byte serial_number[64] = {0x35, 0x77, 0x34, 0x6c, 0x6a, 0x39, 0x6e, 0x65,
                               0x6b, 0x30, 0x64, 0x70, 0x7a, 0x31, 0x6f, 0x37,
                               0x33, 0x61, 0x73, 0x73, 0x67, 0x73, 0x78, 0x34,
@@ -72,13 +72,15 @@ void encrypt_serial_number(BlockCipher *cipher, const struct credential_set *cre
                               0x6b, 0x7a, 0x6b, 0x33, 0x71, 0x74, 0x63, 0x6a,
                               0x35, 0x6d, 0x69, 0x65, 0x78, 0x68, 0x71, 0x61,
                               0x6a, 0x6b, 0x61, 0x37, 0x72, 0x65, 0x34, 0x63};
-    //byte iv[16] = {0x31, 0x31, 0x31, 0x31, 0x32, 0x32, 0x32, 0x32, 0x33, 0x33, 0x33, 0x33, 0x34, 0x34, 0x34, 0x34};
     byte cipher_block[16] = "";
     byte ciphertext_block[16] = "";
+
+    // Random iv generator
     RNG.rand(iv, sizeof(iv));
     crypto_feed_watchdog();
+    // Set secret key
     cipher->setKey(credentials->key, cipher->keySize());
-    // Splits byte array into blocks   
+    // Splits byte array into blocks and encrypt 
     for (int pos = 0; pos < 64; pos += 16) {
       split_block(cipher_block, serial_number, pos);
       if (pos == 0) {
@@ -89,13 +91,6 @@ void encrypt_serial_number(BlockCipher *cipher, const struct credential_set *cre
       cipher->encryptBlock(ciphertext_block, cipher_block);
       add_encrypted_block(ciphertext, ciphertext_block, pos);
     } 
-   /*
-    // Splits byte array into blocks   
-    for (int pos = 0; pos < 64; pos += 16) {
-      split_block(cipher_block, serial_number, pos);
-      cipher->encryptBlock(ciphertext_block, cipher_block);
-      add_encrypted_block(ciphertext, ciphertext_block, pos);
-    }  */
 }
 /*
 void aes_decryption(BlockCipher *cipher, const struct credential_set *credentials, byte plaintext[16] {
@@ -114,32 +109,35 @@ void setup() {
 }
 
 void RFduinoBLE_onReceive(char *data, int len) {
-    const char * authentication_code = "Authentication";
-    data[len] = 0; 
+    const char * authentication_code = "JmOANYLinV80i7fy";
     byte ciphertext_array[64];
-    //byte iv[16] = {0x31, 0x31, 0x31, 0x31, 0x32, 0x32, 0x32, 0x32, 0x33, 0x33, 0x33, 0x33, 0x34, 0x34, 0x34, 0x34};
     byte iv[16]; 
     char ciphertext[128] = "";
     char iv_string[32] = "";
     char packet[20];
     char iv_packet[16];
+    data[len] = 0;
 
     Serial.println();
-    
+    // Verify authentication code
     if(strcmp(data, authentication_code) == 0) {
+      // Encrypt serial number
       encrypt_serial_number(&aes128, &credentials, ciphertext_array, iv);
+      // Convert serial number to hex string
       byte_array_to_hex_string(ciphertext_array, 64, ciphertext);
       Serial.println("");
+      // Splits data into packets and transmit
       for (int i = 0; i < 8; i++) {
         if (i == 6) {
           substring(ciphertext, packet, 121, 8);
           RFduinoBLE.send(packet, 8);
         } else if (i == 7) {
-           byte_array_to_hex_string(iv, 16, iv_string);
-           substring(iv_string, iv_packet, 1, 16);
-           RFduinoBLE.send(iv_packet, 16);
-           substring(iv_string, iv_packet, 17, 16);
-           RFduinoBLE.send(iv_packet, 16);
+          // Transmit random generated iv
+          byte_array_to_hex_string(iv, 16, iv_string);
+          substring(iv_string, iv_packet, 1, 16);
+          RFduinoBLE.send(iv_packet, 16);
+          substring(iv_string, iv_packet, 17, 16);
+          RFduinoBLE.send(iv_packet, 16);
         } else {
           substring(ciphertext, packet, (i*20)+1, 20);
           RFduinoBLE.send(packet, 20);
