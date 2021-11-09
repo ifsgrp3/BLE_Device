@@ -30,17 +30,17 @@ def aes_encryption(plaintext):
     return binascii.hexlify(ciphertext).upper()
     
 # Start scanning and detecting dongles
-print("\nSearching for MFA devices...\n")
-for advertisement in ble.start_scan(Advertisement, timeout=10):
+# print("\nSearching for MFA devices...\n")
+for advertisement in ble.start_scan(Advertisement, timeout=5):
     device_name = advertisement.complete_name
  
     if device_name and device_name not in found:
         if device_name.startswith(device_name_prefix):
             # Add dongle to found list 
             found.add(device_name)
-            print("MFA device found: " + device_name)
-            print("Connected to " + device_name)
-            print("Receiving transmission...")
+            # print("MFA device found: " + device_name)
+            # print("Connected to " + device_name)
+            # print("Receiving transmission...")
             # Establish connection with dongle
             GMS_connection = ble.connect(advertisement)
             # Tranmission with dongle
@@ -53,13 +53,14 @@ for advertisement in ble.start_scan(Advertisement, timeout=10):
                     ciphertext = GMS_transmission.read(64).decode("utf-8")
                     ciphertext += GMS_transmission.read(64).decode("utf-8")
                     iv = GMS_transmission.read(32).decode("utf-8")
-                    print("Encrypted serial number: " + ciphertext)
+                    # print("Encrypted serial number: " + ciphertext)
                 except:
                    print("Transmission failed")
                 # Decrypt serial number with given iv and key
                 try: 
                     ble_serial_num = aes_decryption(ciphertext, iv)
-                    print("Serial number: " + ble_serial_num + "\n")
+                    # print("Serial number: " + ble_serial_num + "\n")
+                    print(ble_serial_num + "," + iv)
                 except:
                     print("Error when decrypting serial number")
                 GMS_connection.disconnect()
