@@ -121,11 +121,14 @@ void RFduinoBLE_onReceive(char *data, int len) {
     Serial.println();
     // Verify authentication code
     if(strcmp(data, authentication_code) == 0) {
+      Serial.println("Password success");
+      Serial.println("Generating random iv");
+      Serial.println("Encrypting serial number");
+      Serial.println("Sending encrypted data");
       // Encrypt serial number
       encrypt_serial_number(&aes128, &credentials, ciphertext_array, iv);
       // Convert serial number to hex string
       byte_array_to_hex_string(ciphertext_array, 64, ciphertext);
-      Serial.println("");
       // Splits data into packets and transmit
       for (int i = 0; i < 8; i++) {
         if (i == 6) {
